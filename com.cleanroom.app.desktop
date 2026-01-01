@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=CleanRoom
+Comment=Manage systemd-nspawn containers
+Exec=python3 /opt/cleanroom/cleanroom.py
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=System;Utility;
+Keywords=container;nspawn;systemd;sandbox;
