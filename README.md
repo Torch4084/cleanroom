@@ -1,3 +1,6 @@
+Unsupported
+
+
 # CleanRoom
 
 A lightweight GTK4 GUI for managing systemd-nspawn containers. Create isolated environments for testing software, experimenting with dependencies, or running untrusted code — without polluting your host system.
