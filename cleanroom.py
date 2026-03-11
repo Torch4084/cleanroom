@@ -2,6 +2,7 @@
 
 import gi
 import os
+import re
 import subprocess
 import shutil
 
@@ -15,6 +16,15 @@ class CleanRoom(Gtk.Application):
         self.machines_path = '/var/lib/machines/'
         self.window = None
         self.listbox = None
+
+    def validate_container_name(self, name):
+        if not name:
+            return 'Container name cannot be empty.'
+        if not re.fullmatch(r'[a-zA-Z0-9._-]+', name):
+            return 'Use only letters, numbers, dots, underscores, and dashes.'
+        if name in {'.', '..'}:
+            return 'Reserved path names are not allowed.'
+        return None
 
     def do_activate(self):
         self.window = Gtk.ApplicationWindow(application=self)
@@ -173,11 +183,30 @@ class CleanRoom(Gtk.Application):
                 name = entry.get_text().strip()
                 if name:
                     container_path = os.path.join(self.machines_path, name)
+                    validation_error = self.validate_container_name(name)
+                    if validation_error:
+                        self.show_error('Invalid container name', validation_error)
+                        d.destroy()
+                        return
+
                     try:
-                        subprocess.run(['sudo', 'mkdir', '-p', container_path], check=True)
+                        exists = self.run_command(
+                            ['sudo', 'test', '-e', container_path],
+                            check=False,
+                        )
+                        if exists.returncode == 0:
+                            self.show_error(
+                                'Container already exists',
+                                f'A container named "{name}" already exists.',
+                            )
+                            d.destroy()
+                            return
+
+                        self.run_command(['sudo', 'mkdir', '-p', container_path])
                         self.refresh_container_list()
-                    except Exception:
-                        pass
+                    except subprocess.CalledProcessError as exc:
+                        details = exc.stderr.strip() or str(exc)
+                        self.show_error('Failed to create container', details)
             d.destroy()
 
         dialog.connect('response', on_response)
@@ -227,10 +256,11 @@ class CleanRoom(Gtk.Application):
             if response == Gtk.ResponseType.YES:
                 container_path = os.path.join(self.machines_path, selected)
                 try:
-                    subprocess.run(['sudo', 'rm', '-rf', container_path], check=True)
+                    self.run_command(['sudo', 'rm', '-rf', container_path])
                     self.refresh_container_list()
-                except Exception:
-                    pass
+                except subprocess.CalledProcessError as exc:
+                    details = exc.stderr.strip() or str(exc)
+                    self.show_error('Failed to delete container', details)
             d.destroy()
 
         dialog.connect('response', on_response)
