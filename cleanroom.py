@@ -16,6 +16,7 @@ class CleanRoom(Gtk.Application):
         self.machines_path = '/var/lib/machines/'
         self.window = None
         self.listbox = None
+        self.status_label = None
 
     def validate_container_name(self, name):
         if not name:
@@ -62,6 +63,10 @@ class CleanRoom(Gtk.Application):
         new_button.connect('clicked', self.on_new_clicked)
         header.pack_start(new_button)
 
+        refresh_button = Gtk.Button(label='Refresh')
+        refresh_button.connect('clicked', self.on_refresh_clicked)
+        header.pack_start(refresh_button)
+
         bootstrap_button = Gtk.Button(label='Bootstrap')
         bootstrap_button.connect('clicked', self.on_bootstrap_clicked)
         header.pack_start(bootstrap_button)
@@ -85,11 +90,23 @@ class CleanRoom(Gtk.Application):
         self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
         scrolled.set_child(self.listbox)
 
-        self.window.set_child(scrolled)
+        self.status_label = Gtk.Label()
+        self.status_label.set_halign(Gtk.Align.START)
+        self.status_label.set_margin_start(12)
+        self.status_label.set_margin_end(12)
+        self.status_label.set_margin_top(8)
+        self.status_label.set_margin_bottom(8)
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        content.append(scrolled)
+        content.append(self.status_label)
+
+        self.window.set_child(content)
         self.refresh_container_list()
         self.window.present()
 
     def refresh_container_list(self):
+        container_count = 0
         while True:
             row = self.listbox.get_row_at_index(0)
             if row is None:
@@ -116,8 +133,10 @@ class CleanRoom(Gtk.Application):
                         label.set_margin_top(8)
                         label.set_margin_bottom(8)
                         self.listbox.append(label)
+                        container_count += 1
             except Exception:
                 pass
+        self.update_status(f'{container_count} container(s) in {self.machines_path}')
 
     def show_message(self, title, body, message_type=Gtk.MessageType.INFO):
         dialog = Gtk.MessageDialog(
@@ -133,6 +152,10 @@ class CleanRoom(Gtk.Application):
 
     def show_error(self, title, body):
         self.show_message(title, body, Gtk.MessageType.ERROR)
+
+    def update_status(self, text):
+        if self.status_label is not None:
+            self.status_label.set_text(text)
 
     def run_command(self, command, check=True):
         return subprocess.run(command, capture_output=True, text=True, check=check)
@@ -283,6 +306,9 @@ class CleanRoom(Gtk.Application):
 
         dialog.connect('response', on_response)
         dialog.present()
+
+    def on_refresh_clicked(self, button):
+        self.refresh_container_list()
 
     def on_launch_clicked(self, button):
         selected = self.get_selected_container()
