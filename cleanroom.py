@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import gi
+import json
 import os
 import re
 import subprocess
 import shutil
+import threading
+import urllib.error
+import urllib.request
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -17,6 +21,11 @@ class CleanRoom(Gtk.Application):
         self.window = None
         self.listbox = None
         self.status_label = None
+        self.ai_api_key = os.environ.get('CLEANROOM_AI_API_KEY', '').strip()
+        self.ai_base_url = os.environ.get('CLEANROOM_AI_BASE_URL', 'https://api.openai.com/v1').rstrip('/')
+        self.ai_model = os.environ.get('CLEANROOM_AI_MODEL', 'gpt-5-mini')
+        self.ai_org = os.environ.get('OPENAI_ORGANIZATION', '').strip()
+        self.ai_project = os.environ.get('OPENAI_PROJECT', '').strip()
 
     def validate_container_name(self, name):
         if not name:
@@ -74,6 +83,10 @@ class CleanRoom(Gtk.Application):
         launch_button = Gtk.Button(label='Launch Terminal')
         launch_button.connect('clicked', self.on_launch_clicked)
         header.pack_start(launch_button)
+
+        ai_button = Gtk.Button(label='AI Assist')
+        ai_button.connect('clicked', self.on_ai_assist_clicked)
+        header.pack_end(ai_button)
 
         delete_button = Gtk.Button(label='Delete')
         delete_button.connect('clicked', self.on_delete_clicked)
@@ -159,6 +172,66 @@ class CleanRoom(Gtk.Application):
 
     def run_command(self, command, check=True):
         return subprocess.run(command, capture_output=True, text=True, check=check)
+
+    def has_ai_support(self):
+        return bool(self.ai_api_key)
+
+    def build_ai_prompt(self, user_goal, selected_container):
+        container_text = selected_container or 'No existing container selected'
+        return (
+            'Help me prepare a systemd-nspawn container for this goal.\n\n'
+            f'Goal: {user_goal}\n'
+            f'Selected container: {container_text}\n'
+            f'Machines path: {self.machines_path}\n\n'
+            'Return a concise plan with these sections:\n'
+            '1. Recommended base distro\n'
+            '2. Bootstrap approach\n'
+            '3. Packages to install\n'
+            '4. Suggested commands\n'
+            '5. Validation steps\n'
+            '6. Security notes\n'
+        )
+
+    def request_ai_plan(self, user_goal, selected_container):
+        payload = json.dumps(
+            {
+                'model': self.ai_model,
+                'instructions': (
+                    'You are helping a Linux desktop application called CleanRoom. '
+                    'Provide practical, conservative guidance for setting up '
+                    'systemd-nspawn containers. Never assume Docker. Keep commands '
+                    'safe, explicit, and easy to review.'
+                ),
+                'input': self.build_ai_prompt(user_goal, selected_container),
+            }
+        ).encode('utf-8')
+
+        request = urllib.request.Request(
+            f'{self.ai_base_url}/responses',
+            data=payload,
+            headers={
+                'Authorization': f'Bearer {self.ai_api_key}',
+                'Content-Type': 'application/json',
+                **({'OpenAI-Organization': self.ai_org} if self.ai_org else {}),
+                **({'OpenAI-Project': self.ai_project} if self.ai_project else {}),
+            },
+            method='POST',
+        )
+
+        with urllib.request.urlopen(request, timeout=45) as response:
+            raw_body = response.read().decode('utf-8')
+
+        data = json.loads(raw_body)
+        output_text = data.get('output_text', '').strip()
+        if output_text:
+            return output_text
+
+        parts = []
+        for item in data.get('output', []):
+            for content in item.get('content', []):
+                if content.get('type') == 'output_text' and content.get('text'):
+                    parts.append(content['text'])
+        return '\n'.join(parts).strip() or 'No response text was returned.'
 
     def open_terminal(self, shell_command):
         terminal = self.detect_terminal()
@@ -309,6 +382,113 @@ class CleanRoom(Gtk.Application):
 
     def on_refresh_clicked(self, button):
         self.refresh_container_list()
+
+    def on_ai_assist_clicked(self, button):
+        selected = self.get_selected_container()
+
+        dialog = Gtk.Dialog(transient_for=self.window, modal=True)
+        dialog.set_title('AI Container Assistant')
+        dialog.add_button('Close', Gtk.ResponseType.CLOSE)
+        generate_button = dialog.add_button('Generate', Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_top(10)
+        content.set_margin_bottom(10)
+        content.set_margin_start(10)
+        content.set_margin_end(10)
+        content.set_spacing(10)
+
+        intro = Gtk.Label(
+            label='Describe what you want the container to be used for. '
+            'The assistant will suggest a setup plan but will not make changes automatically.'
+        )
+        intro.set_wrap(True)
+        intro.set_halign(Gtk.Align.START)
+        content.append(intro)
+
+        context_label = Gtk.Label(
+            label=f'Selected container: {selected or "none"}',
+        )
+        context_label.set_halign(Gtk.Align.START)
+        content.append(context_label)
+
+        goal_entry = Gtk.Entry()
+        goal_entry.set_placeholder_text('Example: Python malware analysis lab with curl, git, and strace')
+        goal_entry.set_activates_default(True)
+        content.append(goal_entry)
+
+        setup_label = Gtk.Label(
+            label=(
+                'Set CLEANROOM_AI_API_KEY to enable AI suggestions. '
+                'Optional: CLEANROOM_AI_MODEL, CLEANROOM_AI_BASE_URL, '
+                'OPENAI_ORGANIZATION, OPENAI_PROJECT.'
+            ),
+        )
+        setup_label.set_wrap(True)
+        setup_label.set_halign(Gtk.Align.START)
+        content.append(setup_label)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_min_content_height(260)
+        scrolled.set_hexpand(True)
+        scrolled.set_vexpand(True)
+
+        result_view = Gtk.TextView()
+        result_view.set_editable(False)
+        result_view.set_cursor_visible(False)
+        result_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        result_buffer = result_view.get_buffer()
+        result_buffer.set_text(
+            'AI suggestions are disabled until CLEANROOM_AI_API_KEY is configured.'
+            if not self.has_ai_support()
+            else 'Enter a goal and click Generate.'
+        )
+        scrolled.set_child(result_view)
+        content.append(scrolled)
+
+        def set_result(text):
+            result_buffer.set_text(text)
+
+        def run_generation():
+            user_goal = goal_entry.get_text().strip()
+            if not user_goal:
+                set_result('Enter a goal first.')
+                return
+
+            if not self.has_ai_support():
+                set_result(
+                    'AI suggestions are not configured.\n\n'
+                    'Set CLEANROOM_AI_API_KEY and restart CleanRoom to enable this feature.'
+                )
+                return
+
+            generate_button.set_sensitive(False)
+            set_result('Generating setup plan...')
+
+            def worker():
+                try:
+                    plan = self.request_ai_plan(user_goal, selected)
+                except urllib.error.HTTPError as exc:
+                    details = exc.read().decode('utf-8', errors='replace').strip()
+                    message = f'API request failed ({exc.code}).\n\n{details or exc.reason}'
+                except Exception as exc:
+                    message = f'Failed to generate AI suggestion.\n\n{exc}'
+                else:
+                    message = plan
+
+                GLib.idle_add(set_result, message)
+                GLib.idle_add(generate_button.set_sensitive, True)
+
+            threading.Thread(target=worker, daemon=True).start()
+
+        def on_response(d, response):
+            if response == Gtk.ResponseType.OK:
+                run_generation()
+                return
+            d.destroy()
+
+        dialog.connect('response', on_response)
+        dialog.present()
 
     def on_launch_clicked(self, button):
         selected = self.get_selected_container()
