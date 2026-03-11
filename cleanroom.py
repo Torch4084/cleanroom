@@ -13,7 +13,7 @@ from gi.repository import Gtk, Gio, GLib
 class CleanRoom(Gtk.Application):
     def __init__(self):
         super().__init__(application_id='com.cleanroom.app', flags=Gio.ApplicationFlags.FLAGS_NONE)
-        self.machines_path = '/var/lib/machines/'
+        self.machines_path = os.environ.get('CLEANROOM_MACHINES_PATH', '/var/lib/machines/')
         self.window = None
         self.listbox = None
         self.status_label = None
