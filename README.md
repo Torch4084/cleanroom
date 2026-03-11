@@ -1,88 +1,76 @@
-Unsupported, don't try
-
-
 # CleanRoom
 
-A lightweight GTK4 GUI for managing systemd-nspawn containers. Create isolated environments for testing software, experimenting with dependencies, or running untrusted code — without polluting your host system.
+CleanRoom is a GTK4 desktop application for managing `systemd-nspawn` containers without dropping down to raw shell commands for every task.
 
+It is aimed at developers, tinkerers, and security-minded Linux users who want lightweight isolated environments for testing packages, reproducing issues, or experimenting without polluting the host system.
 
-## Features
+## What it does
 
-- **Create Containers** — Quickly create new container directories
-- **Bootstrap OS** — Install a minimal Linux distribution (Arch via `pacstrap` or Debian via `debootstrap`)
-- **Launch Terminal** — Drop into an interactive shell inside any container
-- **Delete Containers** — Remove containers with confirmation dialog
-- **Status Indicators** — See at a glance which containers are ready vs empty
+- Create new container directories under `/var/lib/machines`
+- Bootstrap Arch or Debian-based roots with `pacstrap` or `debootstrap`
+- Launch an interactive shell inside a selected container
+- Delete containers with confirmation
+- Show whether a container looks ready or still empty
 
 ## Requirements
 
-### System Dependencies
+### Runtime dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `systemd-container` | Provides `systemd-nspawn` for running containers |
-| `gtk4` | GUI toolkit |
-| `python-gobject` | Python bindings for GTK4 |
+- `python`
+- `python-gobject`
+- `gtk4`
+- `libadwaita`
+- `systemd-container`
 
-### Optional (for bootstrapping)
+### Optional bootstrap tools
 
-| Package | Distribution |
-|---------|--------------|
-| `arch-install-scripts` | Arch Linux (provides `pacstrap`) |
-| `debootstrap` | Debian/Ubuntu |
+- `arch-install-scripts` for `pacstrap`
+- `debootstrap` for Debian-based roots
 
-### Terminal Emulator
+### Supported terminal launchers
 
-CleanRoom will auto-detect and use one of:
+CleanRoom currently looks for one of:
+
 - `kitty`
-- `alacritty`  
+- `alacritty`
 - `gnome-terminal`
 
 ## Installation
 
-### Arch Linux
-
-```bash
-sudo pacman -S systemd gtk4 python-gobject arch-install-scripts
-```
-
-### Debian/Ubuntu
-
-```bash
-sudo apt install systemd-container gir1.2-gtk-4.0 python3-gi debootstrap
-```
-
-### Fedora
-
-```bash
-sudo dnf install systemd-container gtk4 python3-gobject
-```
-
-## Usage
+### Run from source
 
 ```bash
 python3 cleanroom.py
 ```
 
-> **Note:** The application runs as a regular user but uses `sudo` internally for privileged operations. You may be prompted for your password.
+### System install
 
-### Workflow
+```bash
+chmod +x install.sh
+./install.sh
+```
 
-1. **New** — Create a new container (just an empty directory)
-2. **Bootstrap** — Select the container and install a minimal OS
-3. **Launch Terminal** — Enter the container's shell
-4. **Delete** — Remove when no longer needed
+### Arch packaging
 
-## How It Works
+The repository includes a `PKGBUILD` for packaging on Arch-based systems.
 
-CleanRoom is a simple frontend for `systemd-nspawn`, which provides lightweight OS-level virtualization using Linux namespaces and cgroups. Unlike Docker, containers share the host kernel and have minimal overhead.
+## Workflow
 
-Containers are stored in `/var/lib/machines/` — the standard location for `systemd-nspawn` and `machinectl`.
+1. Create a new container entry.
+2. Bootstrap it with a base distribution.
+3. Launch a terminal inside the container.
+4. Delete the container when you are done with it.
 
-## License
+## Notes
 
-MIT License — see [LICENSE](LICENSE)
+- CleanRoom shells out to `sudo` for privileged operations.
+- Containers live in `/var/lib/machines` by default.
+- This project is intentionally small and focused on the most common `systemd-nspawn` workflows.
 
 ## Contributing
 
-Pull requests welcome! Please open an issue first to discuss major changes.
+Bug reports, packaging fixes, and UI improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## License
+
+CleanRoom is released under the [MIT License](LICENSE).
