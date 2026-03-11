@@ -68,13 +68,16 @@ class CleanRoom(Gtk.Application):
 
         if os.path.isdir(self.machines_path):
             try:
-                result = subprocess.run(['sudo', 'ls', self.machines_path], capture_output=True, text=True)
+                result = self.run_command(['sudo', 'ls', self.machines_path])
                 entries = sorted(result.stdout.strip().split('\n')) if result.stdout.strip() else []
                 for entry in entries:
                     if entry:
                         full_path = os.path.join(self.machines_path, entry)
-                        check = subprocess.run(['sudo', 'test', '-d', full_path], capture_output=True)
-                        has_bin = subprocess.run(['sudo', 'test', '-d', os.path.join(full_path, 'bin')], capture_output=True)
+                        check = self.run_command(['sudo', 'test', '-d', full_path], check=False)
+                        has_bin = self.run_command(
+                            ['sudo', 'test', '-d', os.path.join(full_path, 'bin')],
+                            check=False,
+                        )
                         status = ' [ready]' if has_bin.returncode == 0 else ' [empty]'
                         label = Gtk.Label(label=entry + status)
                         label.set_halign(Gtk.Align.START)
@@ -85,6 +88,47 @@ class CleanRoom(Gtk.Application):
                         self.listbox.append(label)
             except Exception:
                 pass
+
+    def show_message(self, title, body, message_type=Gtk.MessageType.INFO):
+        dialog = Gtk.MessageDialog(
+            transient_for=self.window,
+            modal=True,
+            message_type=message_type,
+            buttons=Gtk.ButtonsType.OK,
+            text=title,
+            secondary_text=body,
+        )
+        dialog.connect('response', lambda d, _response: d.destroy())
+        dialog.present()
+
+    def show_error(self, title, body):
+        self.show_message(title, body, Gtk.MessageType.ERROR)
+
+    def run_command(self, command, check=True):
+        return subprocess.run(command, capture_output=True, text=True, check=check)
+
+    def open_terminal(self, shell_command):
+        terminal = self.detect_terminal()
+        if terminal is None:
+            self.show_error(
+                'No terminal launcher found',
+                'Install kitty, alacritty, or gnome-terminal to launch container actions.',
+            )
+            return False
+
+        if terminal == 'kitty':
+            cmd = ['kitty', '-e', 'bash', '-c', shell_command]
+        elif terminal == 'alacritty':
+            cmd = ['alacritty', '-e', 'bash', '-c', shell_command]
+        else:
+            cmd = ['gnome-terminal', '--', 'bash', '-c', shell_command]
+
+        try:
+            subprocess.Popen(cmd)
+            return True
+        except Exception as exc:
+            self.show_error('Failed to launch terminal', str(exc))
+            return False
 
     def get_selected_container(self):
         row = self.listbox.get_selected_row()
@@ -142,10 +186,7 @@ class CleanRoom(Gtk.Application):
     def on_bootstrap_clicked(self, button):
         selected = self.get_selected_container()
         if selected is None:
-            return
-
-        terminal = self.detect_terminal()
-        if terminal is None:
+            self.show_error('No container selected', 'Select a container before bootstrapping it.')
             return
 
         container_path = os.path.join(self.machines_path, selected)
@@ -157,41 +198,17 @@ class CleanRoom(Gtk.Application):
         else:
             bootstrap_cmd = 'echo "No bootstrap tool found (need pacstrap or debootstrap)"; read'
 
-        if terminal == 'kitty':
-            cmd = ['kitty', '-e', 'bash', '-c', bootstrap_cmd]
-        elif terminal == 'alacritty':
-            cmd = ['alacritty', '-e', 'bash', '-c', bootstrap_cmd]
-        else:
-            cmd = ['gnome-terminal', '--', 'bash', '-c', bootstrap_cmd]
-
-        try:
-            subprocess.Popen(cmd)
-        except Exception:
-            pass
+        self.open_terminal(bootstrap_cmd)
 
     def on_launch_clicked(self, button):
         selected = self.get_selected_container()
         if selected is None:
-            return
-
-        terminal = self.detect_terminal()
-        if terminal is None:
+            self.show_error('No container selected', 'Select a container before launching it.')
             return
 
         container_path = os.path.join(self.machines_path, selected)
         nspawn_cmd = f'sudo systemd-nspawn -D {container_path} /bin/bash; echo "\\n\\nContainer exited. Press Enter to close."; read'
-
-        if terminal == 'kitty':
-            cmd = ['kitty', '-e', 'bash', '-c', nspawn_cmd]
-        elif terminal == 'alacritty':
-            cmd = ['alacritty', '-e', 'bash', '-c', nspawn_cmd]
-        else:
-            cmd = ['gnome-terminal', '--', 'bash', '-c', nspawn_cmd]
-
-        try:
-            subprocess.Popen(cmd)
-        except Exception:
-            pass
+        self.open_terminal(nspawn_cmd)
 
     def on_delete_clicked(self, button):
         selected = self.get_selected_container()
