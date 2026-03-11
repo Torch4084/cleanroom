@@ -26,6 +26,26 @@ class CleanRoom(Gtk.Application):
             return 'Reserved path names are not allowed.'
         return None
 
+    def get_bootstrap_options(self):
+        options = []
+        if shutil.which('pacstrap'):
+            options.append(
+                (
+                    'Arch Linux',
+                    'sudo pacstrap -c {container_path} base; '
+                    'echo "\\n\\nBootstrap complete. Press Enter to close."; read',
+                )
+            )
+        if shutil.which('debootstrap'):
+            options.append(
+                (
+                    'Debian stable',
+                    'sudo debootstrap stable {container_path}; '
+                    'echo "\\n\\nBootstrap complete. Press Enter to close."; read',
+                )
+            )
+        return options
+
     def do_activate(self):
         self.window = Gtk.ApplicationWindow(application=self)
         self.window.set_title('CleanRoom')
@@ -219,15 +239,50 @@ class CleanRoom(Gtk.Application):
             return
 
         container_path = os.path.join(self.machines_path, selected)
-        
-        if shutil.which('pacstrap'):
-            bootstrap_cmd = f'sudo pacstrap -c {container_path} base; echo "\\n\\nBootstrap complete. Press Enter to close."; read'
-        elif shutil.which('debootstrap'):
-            bootstrap_cmd = f'sudo debootstrap stable {container_path}; echo "\\n\\nBootstrap complete. Press Enter to close."; read'
-        else:
-            bootstrap_cmd = 'echo "No bootstrap tool found (need pacstrap or debootstrap)"; read'
+        options = self.get_bootstrap_options()
+        if not options:
+            self.show_error(
+                'No bootstrap tool found',
+                'Install arch-install-scripts or debootstrap before bootstrapping a container.',
+            )
+            return
 
-        self.open_terminal(bootstrap_cmd)
+        dialog = Gtk.Dialog(transient_for=self.window, modal=True)
+        dialog.set_title('Choose bootstrap source')
+        dialog.add_button('Cancel', Gtk.ResponseType.CANCEL)
+        dialog.add_button('Start', Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_top(10)
+        content.set_margin_bottom(10)
+        content.set_margin_start(10)
+        content.set_margin_end(10)
+        content.set_spacing(10)
+
+        label = Gtk.Label(label=f'Bootstrap "{selected}" with:')
+        label.set_halign(Gtk.Align.START)
+        content.append(label)
+
+        combo = Gtk.ComboBoxText()
+        for display_name, _template in options:
+            combo.append_text(display_name)
+        combo.set_active(0)
+        content.append(combo)
+
+        def on_response(d, response):
+            if response == Gtk.ResponseType.OK:
+                selected_option = combo.get_active()
+                if selected_option is None or selected_option < 0:
+                    self.show_error('No bootstrap source selected', 'Choose a bootstrap source first.')
+                    d.destroy()
+                    return
+
+                _display_name, command_template = options[selected_option]
+                self.open_terminal(command_template.format(container_path=container_path))
+            d.destroy()
+
+        dialog.connect('response', on_response)
+        dialog.present()
 
     def on_launch_clicked(self, button):
         selected = self.get_selected_container()
