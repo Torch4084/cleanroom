@@ -3,11 +3,12 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc="GTK4 GUI for managing systemd-nspawn containers"
 arch=('any')
-url="https://github.com/yourusername/cleanroom"
+url="https://github.com/Torch4084/cleanroom"
 license=('MIT')
-depends=('python' 'python-gobject' 'gtk4' 'systemd')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'systemd')
 optdepends=(
     'arch-install-scripts: for bootstrapping Arch containers'
+    'debootstrap: for bootstrapping Debian containers'
     'kitty: terminal emulator'
     'alacritty: terminal emulator'
     'gnome-terminal: terminal emulator'
@@ -16,6 +17,10 @@ source=("cleanroom.py" "com.cleanroom.app.desktop")
 sha256sums=('SKIP' 'SKIP')
 
 package() {
-    install -Dm755 "$srcdir/cleanroom.py" "$pkgdir/opt/cleanroom/cleanroom.py"
+    install -Dm755 "$srcdir/cleanroom.py" "$pkgdir/usr/local/share/cleanroom/cleanroom.py"
+    install -Dm755 /dev/stdin "$pkgdir/usr/local/bin/cleanroom" <<'EOF'
+#!/usr/bin/env bash
+exec python3 /usr/local/share/cleanroom/cleanroom.py "$@"
+EOF
     install -Dm644 "$srcdir/com.cleanroom.app.desktop" "$pkgdir/usr/share/applications/com.cleanroom.app.desktop"
 }
