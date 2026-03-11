@@ -11,6 +11,7 @@ It is aimed at developers, tinkerers, and security-minded Linux users who want l
 - Launch an interactive shell inside a selected container
 - Delete containers with confirmation
 - Show whether a container looks ready or still empty
+- Optionally generate AI-assisted setup plans for a container goal
 
 ## Requirements
 
@@ -66,6 +67,30 @@ The repository includes a `PKGBUILD` for packaging on Arch-based systems.
 - CleanRoom shells out to `sudo` for privileged operations.
 - Containers live in `/var/lib/machines` by default.
 - This project is intentionally small and focused on the most common `systemd-nspawn` workflows.
+
+## Optional AI Assistant
+
+CleanRoom includes an optional AI assistant that can suggest a container setup plan from a high-level goal.
+
+It is advisory only:
+
+- it does not create, bootstrap, or delete containers automatically
+- it returns suggested distro, packages, commands, validation steps, and security notes
+- all actions still require explicit user approval in the normal UI
+
+Configure it with environment variables before launching the app:
+
+```bash
+export CLEANROOM_AI_API_KEY=your_api_key
+export CLEANROOM_AI_MODEL=gpt-5-mini
+python3 cleanroom.py
+```
+
+Optional variables:
+
+- `CLEANROOM_AI_BASE_URL`
+- `OPENAI_ORGANIZATION`
+- `OPENAI_PROJECT`
 
 ## Contributing
 

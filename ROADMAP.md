@@ -8,3 +8,4 @@ Near-term improvements that would make CleanRoom more useful:
 - Optional per-user or custom machines directory support
 - Improved desktop integration and packaging
 - Better visual feedback while long-running actions are in progress
+- Smarter AI-assisted workflows such as package set refinement or command review
