@@ -1,5 +1,5 @@
 pkgname=cleanroom
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="GTK4 GUI for managing systemd-nspawn containers"
 arch=('any')
