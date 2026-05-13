@@ -1,5 +1,7 @@
 # CleanRoom
 
+[![CI](https://github.com/Torch4084/cleanroom/actions/workflows/ci.yml/badge.svg)](https://github.com/Torch4084/cleanroom/actions/workflows/ci.yml)
+
 CleanRoom is a GTK4 desktop application for managing `systemd-nspawn` containers without dropping down to raw shell commands for every task.
 
 It is aimed at developers, tinkerers, and security-minded Linux users who want lightweight isolated environments for testing packages, reproducing issues, or experimenting without polluting the host system.
@@ -68,6 +70,18 @@ The repository includes a `PKGBUILD` for packaging on Arch-based systems.
 - Containers live in `/var/lib/machines` by default.
 - This project is intentionally small and focused on the most common `systemd-nspawn` workflows.
 
+## Safety model
+
+CleanRoom is designed to keep privileged actions explicit and reviewable:
+
+- container names are validated before filesystem paths are built
+- command-building helpers are covered by unit tests
+- bootstrap and launch commands run in a terminal workflow instead of silently in the background
+- destructive deletion requires confirmation
+- the optional AI assistant is advisory only and cannot execute privileged actions
+
+See [SECURITY.md](SECURITY.md) for supported security reporting and threat-model details.
+
 ## Optional AI Assistant
 
 CleanRoom includes an optional AI assistant that can suggest a container setup plan from a high-level goal.
@@ -95,6 +109,14 @@ Optional variables:
 ## Contributing
 
 Bug reports, packaging fixes, and UI improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+Useful local checks:
+
+```bash
+pytest
+python3 -m py_compile cleanroom.py cleanroom_core.py
+ruff check .
+```
 
 ## License
 

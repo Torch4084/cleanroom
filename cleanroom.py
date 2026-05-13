@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 
-import gi
 import json
 import os
-import re
-import subprocess
 import shutil
+import subprocess
 import threading
 import urllib.error
 import urllib.request
 
+import gi
+
+from cleanroom_core import (
+    build_ai_prompt,
+    build_bootstrap_command,
+    build_launch_command,
+    container_path,
+    validate_container_name,
+)
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Gio, GLib
+from gi.repository import Gio, GLib, Gtk  # noqa: E402
+
 
 class CleanRoom(Gtk.Application):
     def __init__(self):
@@ -28,13 +37,7 @@ class CleanRoom(Gtk.Application):
         self.ai_project = os.environ.get('OPENAI_PROJECT', '').strip()
 
     def validate_container_name(self, name):
-        if not name:
-            return 'Container name cannot be empty.'
-        if not re.fullmatch(r'[a-zA-Z0-9._-]+', name):
-            return 'Use only letters, numbers, dots, underscores, and dashes.'
-        if name in {'.', '..'}:
-            return 'Reserved path names are not allowed.'
-        return None
+        return validate_container_name(name)
 
     def get_bootstrap_options(self):
         options = []
@@ -42,16 +45,14 @@ class CleanRoom(Gtk.Application):
             options.append(
                 (
                     'Arch Linux',
-                    'sudo pacstrap -c {container_path} base; '
-                    'echo "\\n\\nBootstrap complete. Press Enter to close."; read',
+                    'pacstrap',
                 )
             )
         if shutil.which('debootstrap'):
             options.append(
                 (
                     'Debian stable',
-                    'sudo debootstrap stable {container_path}; '
-                    'echo "\\n\\nBootstrap complete. Press Enter to close."; read',
+                    'debootstrap',
                 )
             )
         return options
@@ -133,7 +134,7 @@ class CleanRoom(Gtk.Application):
                 for entry in entries:
                     if entry:
                         full_path = os.path.join(self.machines_path, entry)
-                        check = self.run_command(['sudo', 'test', '-d', full_path], check=False)
+                        self.run_command(['sudo', 'test', '-d', full_path], check=False)
                         has_bin = self.run_command(
                             ['sudo', 'test', '-d', os.path.join(full_path, 'bin')],
                             check=False,
@@ -177,20 +178,7 @@ class CleanRoom(Gtk.Application):
         return bool(self.ai_api_key)
 
     def build_ai_prompt(self, user_goal, selected_container):
-        container_text = selected_container or 'No existing container selected'
-        return (
-            'Help me prepare a systemd-nspawn container for this goal.\n\n'
-            f'Goal: {user_goal}\n'
-            f'Selected container: {container_text}\n'
-            f'Machines path: {self.machines_path}\n\n'
-            'Return a concise plan with these sections:\n'
-            '1. Recommended base distro\n'
-            '2. Bootstrap approach\n'
-            '3. Packages to install\n'
-            '4. Suggested commands\n'
-            '5. Validation steps\n'
-            '6. Security notes\n'
-        )
+        return build_ai_prompt(user_goal, selected_container, self.machines_path)
 
     def request_ai_plan(self, user_goal, selected_container):
         payload = json.dumps(
@@ -298,16 +286,16 @@ class CleanRoom(Gtk.Application):
             if response == Gtk.ResponseType.OK:
                 name = entry.get_text().strip()
                 if name:
-                    container_path = os.path.join(self.machines_path, name)
                     validation_error = self.validate_container_name(name)
                     if validation_error:
                         self.show_error('Invalid container name', validation_error)
                         d.destroy()
                         return
 
+                    target_path = container_path(self.machines_path, name)
                     try:
                         exists = self.run_command(
-                            ['sudo', 'test', '-e', container_path],
+                            ['sudo', 'test', '-e', target_path],
                             check=False,
                         )
                         if exists.returncode == 0:
@@ -318,7 +306,7 @@ class CleanRoom(Gtk.Application):
                             d.destroy()
                             return
 
-                        self.run_command(['sudo', 'mkdir', '-p', container_path])
+                        self.run_command(['sudo', 'mkdir', '-p', target_path])
                         self.refresh_container_list()
                     except subprocess.CalledProcessError as exc:
                         details = exc.stderr.strip() or str(exc)
@@ -334,7 +322,7 @@ class CleanRoom(Gtk.Application):
             self.show_error('No container selected', 'Select a container before bootstrapping it.')
             return
 
-        container_path = os.path.join(self.machines_path, selected)
+        target_path = container_path(self.machines_path, selected)
         options = self.get_bootstrap_options()
         if not options:
             self.show_error(
@@ -369,12 +357,15 @@ class CleanRoom(Gtk.Application):
             if response == Gtk.ResponseType.OK:
                 selected_option = combo.get_active()
                 if selected_option is None or selected_option < 0:
-                    self.show_error('No bootstrap source selected', 'Choose a bootstrap source first.')
+                    self.show_error(
+                        'No bootstrap source selected',
+                        'Choose a bootstrap source first.',
+                    )
                     d.destroy()
                     return
 
-                _display_name, command_template = options[selected_option]
-                self.open_terminal(command_template.format(container_path=container_path))
+                _display_name, tool = options[selected_option]
+                self.open_terminal(build_bootstrap_command(tool, target_path))
             d.destroy()
 
         dialog.connect('response', on_response)
@@ -413,7 +404,9 @@ class CleanRoom(Gtk.Application):
         content.append(context_label)
 
         goal_entry = Gtk.Entry()
-        goal_entry.set_placeholder_text('Example: Python malware analysis lab with curl, git, and strace')
+        goal_entry.set_placeholder_text(
+            'Example: Python malware analysis lab with curl, git, and strace'
+        )
         goal_entry.set_activates_default(True)
         content.append(goal_entry)
 
@@ -496,9 +489,8 @@ class CleanRoom(Gtk.Application):
             self.show_error('No container selected', 'Select a container before launching it.')
             return
 
-        container_path = os.path.join(self.machines_path, selected)
-        nspawn_cmd = f'sudo systemd-nspawn -D {container_path} /bin/bash; echo "\\n\\nContainer exited. Press Enter to close."; read'
-        self.open_terminal(nspawn_cmd)
+        target_path = container_path(self.machines_path, selected)
+        self.open_terminal(build_launch_command(target_path))
 
     def on_delete_clicked(self, button):
         selected = self.get_selected_container()
@@ -515,9 +507,9 @@ class CleanRoom(Gtk.Application):
 
         def on_response(d, response):
             if response == Gtk.ResponseType.YES:
-                container_path = os.path.join(self.machines_path, selected)
+                target_path = container_path(self.machines_path, selected)
                 try:
-                    self.run_command(['sudo', 'rm', '-rf', container_path])
+                    self.run_command(['sudo', 'rm', '-rf', target_path])
                     self.refresh_container_list()
                 except subprocess.CalledProcessError as exc:
                     details = exc.stderr.strip() or str(exc)

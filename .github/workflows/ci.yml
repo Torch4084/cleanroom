@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Python checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test tools
+        run: python -m pip install --upgrade pytest ruff
+
+      - name: Run unit tests
+        run: pytest
+
+      - name: Compile application entry point
+        run: python -m py_compile cleanroom.py cleanroom_core.py
+
+      - name: Lint
+        run: ruff check .

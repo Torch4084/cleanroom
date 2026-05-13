@@ -1,0 +1,25 @@
+name: Security hardening
+description: Suggest a security, safety, or privilege-boundary improvement
+title: "[Security]: "
+labels: ["security", "hardening"]
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Area
+      description: Which workflow is affected?
+      placeholder: Container creation, bootstrapping, deletion, AI assistant, command construction, documentation, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: Describe the risk or safety improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should CleanRoom do differently?

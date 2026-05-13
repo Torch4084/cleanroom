@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible CleanRoom problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open CleanRoom
+        2. Create a container named ...
+        3. Click ...
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distribution
+      placeholder: Arch Linux, Fedora, Debian 12, Ubuntu 24.04, etc.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or terminal output
+      render: shell
