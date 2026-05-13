@@ -244,6 +244,52 @@ class CleanRoom(Gtk.Application):
             self.show_error('Failed to launch terminal', str(exc))
             return False
 
+    def confirm_terminal_command(self, title, intro, shell_command):
+        dialog = Gtk.Dialog(transient_for=self.window, modal=True)
+        dialog.set_title(title)
+        dialog.add_button('Cancel', Gtk.ResponseType.CANCEL)
+        dialog.add_button('Run in Terminal', Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_top(10)
+        content.set_margin_bottom(10)
+        content.set_margin_start(10)
+        content.set_margin_end(10)
+        content.set_spacing(10)
+
+        intro_label = Gtk.Label(label=intro)
+        intro_label.set_wrap(True)
+        intro_label.set_halign(Gtk.Align.START)
+        content.append(intro_label)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_min_content_height(140)
+        scrolled.set_hexpand(True)
+
+        command_view = Gtk.TextView()
+        command_view.set_editable(False)
+        command_view.set_cursor_visible(False)
+        command_view.set_monospace(True)
+        command_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        command_view.get_buffer().set_text(shell_command)
+        scrolled.set_child(command_view)
+        content.append(scrolled)
+
+        warning = Gtk.Label(
+            label='Review this command before continuing. It may request sudo privileges.',
+        )
+        warning.set_wrap(True)
+        warning.set_halign(Gtk.Align.START)
+        content.append(warning)
+
+        def on_response(d, response):
+            if response == Gtk.ResponseType.OK:
+                self.open_terminal(shell_command)
+            d.destroy()
+
+        dialog.connect('response', on_response)
+        dialog.present()
+
     def get_selected_container(self):
         row = self.listbox.get_selected_row()
         if row is not None:
@@ -365,7 +411,12 @@ class CleanRoom(Gtk.Application):
                     return
 
                 _display_name, tool = options[selected_option]
-                self.open_terminal(build_bootstrap_command(tool, target_path))
+                command = build_bootstrap_command(tool, target_path)
+                self.confirm_terminal_command(
+                    'Review bootstrap command',
+                    f'CleanRoom will bootstrap "{selected}" using {tool}.',
+                    command,
+                )
             d.destroy()
 
         dialog.connect('response', on_response)
@@ -490,7 +541,11 @@ class CleanRoom(Gtk.Application):
             return
 
         target_path = container_path(self.machines_path, selected)
-        self.open_terminal(build_launch_command(target_path))
+        self.confirm_terminal_command(
+            'Review launch command',
+            f'CleanRoom will launch an interactive shell inside "{selected}".',
+            build_launch_command(target_path),
+        )
 
     def on_delete_clicked(self, button):
         selected = self.get_selected_container()

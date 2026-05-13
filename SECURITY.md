@@ -30,7 +30,7 @@ manage `systemd-nspawn` roots under a configured machines directory.
 
 - Container names are validated before paths are constructed.
 - Privileged filesystem operations are run through explicit `sudo` commands.
-- Bootstrap and launch commands are displayed in a terminal-driven workflow.
+- Bootstrap and launch commands are previewed before opening a terminal-driven workflow.
 - The optional AI assistant is advisory only and does not create, bootstrap, launch, or
   delete containers.
 - AI-generated commands must be reviewed and manually applied by the user.

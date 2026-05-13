@@ -6,6 +6,7 @@ echo "Installing CleanRoom..."
 
 sudo install -d /usr/local/share/cleanroom
 sudo install -m 755 cleanroom.py /usr/local/share/cleanroom/cleanroom.py
+sudo install -m 644 cleanroom_core.py /usr/local/share/cleanroom/cleanroom_core.py
 sudo install -m 644 com.cleanroom.app.desktop /usr/share/applications/com.cleanroom.app.desktop
 sudo install -d /usr/local/bin
 printf '#!/usr/bin/env bash\nexec python3 /usr/local/share/cleanroom/cleanroom.py "$@"\n' \

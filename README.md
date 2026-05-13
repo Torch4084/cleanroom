@@ -13,6 +13,7 @@ It is aimed at developers, tinkerers, and security-minded Linux users who want l
 - Launch an interactive shell inside a selected container
 - Delete containers with confirmation
 - Show whether a container looks ready or still empty
+- Preview privileged bootstrap and launch commands before they run
 - Optionally generate AI-assisted setup plans for a container goal
 
 ## Requirements
@@ -37,6 +38,9 @@ CleanRoom currently looks for one of:
 - `kitty`
 - `alacritty`
 - `gnome-terminal`
+
+Distribution-specific setup notes are available in [docs/distro-workflows.md](docs/distro-workflows.md).
+The project threat model is documented in [docs/threat-model.md](docs/threat-model.md).
 
 ## Installation
 
@@ -76,7 +80,7 @@ CleanRoom is designed to keep privileged actions explicit and reviewable:
 
 - container names are validated before filesystem paths are built
 - command-building helpers are covered by unit tests
-- bootstrap and launch commands run in a terminal workflow instead of silently in the background
+- bootstrap and launch commands are previewed before opening a terminal workflow
 - destructive deletion requires confirmation
 - the optional AI assistant is advisory only and cannot execute privileged actions
 
@@ -109,6 +113,7 @@ Optional variables:
 ## Contributing
 
 Bug reports, packaging fixes, and UI improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+Maintainer responsibilities are documented in [MAINTAINERS.md](MAINTAINERS.md).
 
 Useful local checks:
 
@@ -117,6 +122,8 @@ pytest
 python3 -m py_compile cleanroom.py cleanroom_core.py
 ruff check .
 ```
+
+See [docs/testing.md](docs/testing.md) and [docs/release-checklist.md](docs/release-checklist.md) for the full maintainer workflow.
 
 ## License
 
