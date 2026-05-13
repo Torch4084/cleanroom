@@ -6,6 +6,18 @@ CleanRoom is a GTK4 desktop application for managing `systemd-nspawn` containers
 
 It is aimed at developers, tinkerers, and security-minded Linux users who want lightweight isolated environments for testing packages, reproducing issues, or experimenting without polluting the host system.
 
+## Screenshots
+
+The screenshots below use a demo machines directory and do not run privileged commands.
+
+![CleanRoom main window showing detected demo containers](docs/assets/cleanroom-main.png)
+
+![Bootstrap source selection dialog](docs/assets/cleanroom-bootstrap-choice.png)
+
+![Privileged command preview before terminal launch](docs/assets/cleanroom-command-preview.png)
+
+![Optional advisory AI assistant](docs/assets/cleanroom-ai-assistant.png)
+
 ## What it does
 
 - Create new container directories under `/var/lib/machines`
