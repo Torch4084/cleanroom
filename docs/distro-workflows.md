@@ -31,6 +31,7 @@ name instead of `stable`.
 
 CleanRoom currently detects these terminal launchers:
 
+- `konsole`
 - `kitty`
 - `alacritty`
 - `gnome-terminal`
