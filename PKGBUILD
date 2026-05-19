@@ -9,6 +9,7 @@ depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'systemd')
 optdepends=(
     'arch-install-scripts: for bootstrapping Arch containers'
     'debootstrap: for bootstrapping Debian containers'
+    'konsole: terminal emulator'
     'kitty: terminal emulator'
     'alacritty: terminal emulator'
     'gnome-terminal: terminal emulator'
