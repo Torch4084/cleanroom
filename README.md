@@ -70,6 +70,15 @@ chmod +x install.sh
 ./install.sh
 ```
 
+Available installer commands:
+
+```bash
+./install.sh install
+./install.sh uninstall
+./install.sh reinstall
+./install.sh --help
+```
+
 ### Arch packaging
 
 The repository includes a `PKGBUILD` for packaging on Arch-based systems.
