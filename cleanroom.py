@@ -226,11 +226,12 @@ class CleanRoom(Gtk.Application):
         if terminal is None:
             self.show_error(
                 'No terminal launcher found',
-                'Install kitty, alacritty, or gnome-terminal to launch container actions.',
+                'Install konsole, kitty, alacritty, or gnome-terminal to launch container actions.',
             )
             return False
-
-        if terminal == 'kitty':
+        if terminal == 'konsole':
+            cmd = ['konsole', '-e', 'bash', '-c', shell_command]
+        elif terminal == 'kitty':
             cmd = ['kitty', '-e', 'bash', '-c', shell_command]
         elif terminal == 'alacritty':
             cmd = ['alacritty', '-e', 'bash', '-c', shell_command]
@@ -300,7 +301,7 @@ class CleanRoom(Gtk.Application):
         return None
 
     def detect_terminal(self):
-        terminals = ['kitty', 'alacritty', 'gnome-terminal']
+        terminals = ['konsole', 'kitty', 'alacritty', 'gnome-terminal']
         for term in terminals:
             if shutil.which(term):
                 return term
