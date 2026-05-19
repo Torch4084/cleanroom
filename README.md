@@ -47,6 +47,7 @@ The screenshots below use a demo machines directory and do not run privileged co
 
 CleanRoom currently looks for one of:
 
+- `konsole`
 - `kitty`
 - `alacritty`
 - `gnome-terminal`
