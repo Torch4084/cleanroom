@@ -26,6 +26,9 @@ install_cleanroom() {
     sudo install -d "$install_prefix"
     sudo install -m 755 cleanroom.py "$install_prefix/cleanroom.py"
     sudo install -m 644 cleanroom_core.py "$install_prefix/cleanroom_core.py"
+    sudo install -m 644 cleanroom.png "/usr/share/pixmaps/cleanroom.png"
+    sudo install -d "/usr/share/icons/hicolor/scalable/apps"
+    sudo install -m 644 cleanroom.png "/usr/share/icons/hicolor/scalable/apps/cleanroom.png"
     sudo install -m 644 com.cleanroom.app.desktop "$desktop_path"
     sudo install -d /usr/local/bin
     printf '#!/usr/bin/env bash\nexec python3 /usr/local/share/cleanroom/cleanroom.py "$@"\n' \
@@ -42,6 +45,8 @@ uninstall_cleanroom() {
 
     sudo rm -f "$launcher_path"
     sudo rm -f "$desktop_path"
+    sudo rm -f "/usr/share/pixmaps/cleanroom.png"
+    sudo rm -f "/usr/share/icons/hicolor/scalable/apps/cleanroom.png"
     sudo rm -f "$install_prefix/cleanroom.py"
     sudo rm -f "$install_prefix/cleanroom_core.py"
     sudo rmdir "$install_prefix" 2>/dev/null || true

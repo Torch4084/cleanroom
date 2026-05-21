@@ -61,6 +61,7 @@ class CleanRoom(Gtk.Application):
         self.window = Gtk.ApplicationWindow(application=self)
         self.window.set_title('CleanRoom')
         self.window.set_default_size(500, 400)
+        self.window.set_icon_name('cleanroom')
 
         header = Gtk.HeaderBar()
         header.set_show_title_buttons(True)

@@ -14,8 +14,8 @@ optdepends=(
     'alacritty: terminal emulator'
     'gnome-terminal: terminal emulator'
 )
-source=("cleanroom.py" "cleanroom_core.py" "com.cleanroom.app.desktop")
-sha256sums=('SKIP' 'SKIP' 'SKIP')
+source=("cleanroom.py" "cleanroom_core.py" "com.cleanroom.app.desktop" "cleanroom.png")
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 package() {
     install -Dm755 "$srcdir/cleanroom.py" "$pkgdir/usr/local/share/cleanroom/cleanroom.py"
@@ -25,4 +25,6 @@ package() {
 exec python3 /usr/local/share/cleanroom/cleanroom.py "$@"
 EOF
     install -Dm644 "$srcdir/com.cleanroom.app.desktop" "$pkgdir/usr/share/applications/com.cleanroom.app.desktop"
+    install -Dm644 "$srcdir/cleanroom.png" "$pkgdir/usr/share/pixmaps/cleanroom.png"
+    install -Dm644 "$srcdir/cleanroom.png" "$pkgdir/usr/share/icons/hicolor/scalable/apps/cleanroom.png"
 }
